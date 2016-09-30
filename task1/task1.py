@@ -1,44 +1,138 @@
-'''
-Now that you have the data, the first task is to verify all their fields, e,g, if source_rank is claimed to be from [1,10], then this should be true every single day.
-To do this, what you have to do is to plot the daily maxes and daily mins for source_rank for each day (see plot below for an example).
-Note that python has a lot of vectorized operations.
-If you find that you're doing a brute force iteration, i.e.
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Sep 26 12:51:14 2016
 
-	for i in range( N ):
-		do stuff on array[i]
+@author: jsrhu
 
-then there may be a faster way.
-Avoid brute force iteration if at all possible.
-
-This verification can be done for any bounded numeric field.
-And we should certainly verify all of them.
-
-Secondly, we can also aggregate a list of URLs which they scrape.
-I think it would be interested in compiling a catalog of unique URLs.
-You would essentially extract the URL pandas series from the dataframe look at the source website (this will involve using split) and then keep unique values.
-
-The same thing could be done for the list of tickers.
-'''
-
-import sys
+STATUS:
+TODO
+- add title slide to power point
+- change path to output to ignored directory
+"""
+import os
 import pandas as pd
-import numpy as np
+
+import matplotlib
 import matplotlib.pyplot as plt
 
-compressed_data_2014 = '../data/2014all_head.csv.gz'
-compressed_data_2015 = '../data/2015all_head.csv.gz'
-compressed_data_2016 = '../data/2016all_head.csv.gz'
+from pptx import Presentation
+from pptx.util import Inches
 
-dataframe_2014 = pd.read_csv(compressed_data_2014, nrows=1000, header=0)
-dataframe_2015 = pd.read_csv(compressed_data_2015, nrows=1000, header=0)
-dataframe_2016 = pd.read_csv(compressed_data_2016, nrows=1000, header=0)
+compressed_data = '../data/backtest_alpha_for_ernest.csv.gz'
 
+headers = ['story_sentiment','story_volume','story_traffic','story_shares','article_sentiment','article_traffic','event_impact_score_overall','event_impact_score_entity_1','event_impact_score_entity_2','avg_day_sentiment']
 
-for column in dataframe_2014.columns:
+plot_type = 'min_max'
+
+layout_title = 0
+layout_title_content = 1
+layout_section_header = 2
+layout_two_content = 3
+layout_comparison = 4
+layout_title_only = 5
+layout_blank = 6
+layout_content_caption = 7
+layout_picture_caption = 8
+
+'''
+Reads gzip compressed csv file and converts date string into date-time object
+Returns dataframerepresentation of csv file
+'''
+def readLimitedRows(csv_file, rows):
+    date_format="%Y-%m-%d %H:%M:%S %Z"
+    dateparse = lambda x: pd.datetime.strptime(x, date_format)
+    return pd.read_csv(filepath_or_buffer=csv_file, compression='gzip', nrows=rows, header=0, date_parser=dateparse, parse_dates=["harvested_at"])
+
+'''
+Reads gzip compressed csv file and converts date string into date-time object
+Does not return anything
+'''
+def readFull(csv_file):
+    date_format="%Y-%m-%d %H:%M:%S %Z"
+    dateparse = lambda x: pd.datetime.strptime(x, date_format)
+    pd.read_csv(filepath_or_buffer=csv_file, compression='gzip', header=0, date_parser=dateparse, parse_dates=["harvested_at"])
+
+'''
+Returns dataframe with select columns from the original
+'''
+def selectColumnsDataFrame(data_frame,columns):
+    data_frame = data_frame[columns]
+    return data_frame
+
+'''
+TODO
+'''
+def increaseYScaleRange(plot,percentage):
+    plot.ylim(df_min[column].min()-abs(.1*df_min[column].min()),df_max[column].max()+abs(.1*df_max[column].max()))
+
+'''
+Attempts to create directory for plot images
+Returns path to directory
+'''
+def createDir(name, descriptor):
+    path = name+'_'+descriptor
     try:
-        print "Minimum value of ",column,":",dataframe_2014[column].min()
-        print "Maximum value of ",column,":",dataframe_2014[column].max()
-        print
+        os.mkdir(path)
+        return path
     except:
-        print column
-        pass
+        return path
+
+def addImageSlide(presentation, layout, image_path):
+    slide_layout = presentation.slide_layouts[layout]
+    
+    slide = presentation.slides.add_slide(slide_layout)
+    
+    left = Inches(1)
+    top = Inches(1)
+    height = Inches(5.5)
+    return slide.shapes.add_picture(image_file=image_path, left=left, top=top, height=height)
+    
+def savePresentation(presentation, title):
+    presentation.save(title+'.pptx')
+    
+df = readLimitedRows(csv_file=compressed_data,rows=10000)
+df_max = pd.DataFrame()
+df_min = pd.DataFrame()
+    
+df_group = df.groupby( df['harvested_at'].apply(lambda x: x.date() ) )
+
+for key,group in df_group:
+    group_max = group.max(numeric_only=True)
+    group_min = group.min(numeric_only=True)
+    group_max['date'] = key
+    group_min['date'] = key
+    
+    df_max = pd.concat([df_max, group_max.to_frame().T])
+    df_min = pd.concat([df_min, group_min.to_frame().T])
+    
+df_max.set_index(keys='date', inplace=True)
+df_min.set_index(keys='date', inplace=True)
+    
+df_max = selectColumnsDataFrame(data_frame=df_max,columns=headers)
+df_min = selectColumnsDataFrame(data_frame=df_min,columns=headers)
+    
+plot_dir = createDir(name=plot_type, descriptor='plots')
+os.chdir(plot_dir)
+
+presentation = Presentation()
+descriptor = 'max_min_plot'
+title_slide = presentation.slides.add_slide(presentation.slide_layouts[layout_title])
+title_slide.shapes.title.text = 'Maximum and Minimum Plots of Quantitative Metrics in:\n'+'Accern Data'
+    
+for column in df_max:
+    column_plot = df_max[column].plot()
+    column_plot = df_min[column].plot(ax=column_plot, title=column, x_compat=True, rot=45, figsize=(11,8))
+        
+    plt.ylim(df_min[column].min()-abs(.1*df_min[column].min()),df_max[column].max()+abs(.1*df_max[column].max()))
+    
+    image_path = column+'_'+descriptor+'.png'
+    plt.savefig(image_path)
+    #plt.show()
+    plt.clf()
+    
+    addImageSlide(presentation=presentation, layout=layout_blank, image_path=image_path)
+
+os.chdir('..')
+ppt_dir = createDir(name='ppt', descriptor=descriptor)
+os.chdir(ppt_dir)
+savePresentation(presentation,descriptor)
