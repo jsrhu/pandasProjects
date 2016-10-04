@@ -6,17 +6,19 @@ Created on Mon Sep 26 12:51:14 2016
 
 STATUS:
 TODO
-- add title slide to power point
 - change path to output to ignored directory
 """
 import os
 import pandas as pd
 
-import matplotlib
 import matplotlib.pyplot as plt
 
 from pptx import Presentation
 from pptx.util import Inches
+
+from urlparse import urlparse
+
+import readWrite
 
 compressed_data = '../data/backtest_alpha_for_ernest.csv.gz'
 
@@ -53,17 +55,17 @@ def readFull(csv_file):
     pd.read_csv(filepath_or_buffer=csv_file, compression='gzip', header=0, date_parser=dateparse, parse_dates=["harvested_at"])
 
 '''
-Returns dataframe with select columns from the original
+Returns dataframe with select specififed columns from the original
 '''
 def selectColumnsDataFrame(data_frame,columns):
     data_frame = data_frame[columns]
     return data_frame
 
 '''
-TODO
+increases the y scale of a pyplot instance by a given decimal percentage
 '''
 def increaseYScaleRange(plot,percentage):
-    plot.ylim(df_min[column].min()-abs(.1*df_min[column].min()),df_max[column].max()+abs(.1*df_max[column].max()))
+    plot.ylim(df_min[column].min()-abs(percentage*df_min[column].min()),df_max[column].max()+abs(percentage*df_max[column].max()))
 
 '''
 Attempts to create directory for plot images
@@ -96,6 +98,42 @@ df_min = pd.DataFrame()
     
 df_group = df.groupby( df['harvested_at'].apply(lambda x: x.date() ) )
 
+'''
+form as one dataframe; pickle the file
+ensure unique URLs are by domain
+'''
+
+ticker_count_1 = df_group['entities_ticker_1'].nunique()
+ticker_count_1.plot(title='Number of Primary Tickers from Harvested Articles by Day', rot=45)
+plt.savefig('unique_ticker1_plot.png')
+plt.clf()
+
+'''
+FOR LATER USE
+ticker1 = df_group['entities_ticker_1'].unique()
+for date in ticker1:
+    for ticker in date:
+        ticker.translate(string.maketrans("",""),string.punctuation)
+
+ticker1.to_csv(path='ticker1.txt')
+'''
+
+ticker_count_2 = df_group['entities_ticker_2'].nunique()
+ticker_count_2.plot(title='Number of Secondary Tickers from Harvested Articles by Day', rot=45)
+plt.savefig('unique_ticker2_plot.png')
+plt.clf()
+
+url_list = []
+url_count = df_group['article_url'].nunique()
+for row in df_group['article_url'].unique():
+    for url in row:
+        url_list.append(urlparse(url).netloc)
+df_url = pd.Series(url_list, dtype='string')
+df_url.sort_values(inplace=True)
+df_url.drop_duplicates(inplace=True)
+print df_url.nunique()
+df_url.to_csv(path='unique_urls.txt')
+
 for key,group in df_group:
     group_max = group.max(numeric_only=True)
     group_min = group.min(numeric_only=True)
@@ -123,11 +161,10 @@ for column in df_max:
     column_plot = df_max[column].plot()
     column_plot = df_min[column].plot(ax=column_plot, title=column, x_compat=True, rot=45, figsize=(11,8))
         
-    plt.ylim(df_min[column].min()-abs(.1*df_min[column].min()),df_max[column].max()+abs(.1*df_max[column].max()))
+    increaseYScaleRange(plt, .10)
     
     image_path = column+'_'+descriptor+'.png'
     plt.savefig(image_path)
-    #plt.show()
     plt.clf()
     
     addImageSlide(presentation=presentation, layout=layout_blank, image_path=image_path)

@@ -89,7 +89,9 @@ ENV/
 .ropeproject
 
 # Data
+data
 *.gz
+output
 
 # Scripts
 ignore
