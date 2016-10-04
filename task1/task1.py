@@ -100,7 +100,6 @@ df_group = df.groupby( df['harvested_at'].apply(lambda x: x.date() ) )
 
 '''
 form as one dataframe; pickle the file
-ensure unique URLs are by domain
 '''
 
 ticker_count_1 = df_group['entities_ticker_1'].nunique()
