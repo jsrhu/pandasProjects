@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+en#!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
 Created on Fri Oct  7 10:29:48 2016
@@ -13,7 +13,7 @@ import pandas as pd
 
 import matplotlib.pyplot as plt
 
-import readData
+import readWriteData
 from stringProcess import removePunctuation
 
 '''
@@ -37,9 +37,9 @@ data_SPY = etf_path+'SPY_All_Holdings.xls'
 data_MDY = etf_path+'MDY_All_Holdings.xls'
 data_IWM = etf_path+'IWM_holdings.csv'
 
-df_SPY = readData.readToDF(data_SPY)
-df_MDY = readData.readToDF(data_MDY)
-df_IWM = readData.readToDF(data_IWM)
+df_SPY = readWriteData.readToDF(data_SPY)
+df_MDY = readWriteData.readToDF(data_MDY)
+df_IWM = readWriteData.readToDF(data_IWM)
 
 df_SPY.dropna(inplace=True)
 df_MDY.dropna(inplace=True)

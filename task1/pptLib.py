@@ -10,30 +10,22 @@ import matplotlib.pyplot as plt
 from pptx import Presentation
 from pptx.util import Inches
 
-#if '__name__' == '__main__':
+layout_title = 0
+layout_title_content = 1
+layout_section_header = 2
+layout_two_content = 3
+layout_comparison = 4
+layout_title_only = 5
+layout_blank = 6
+layout_content_caption = 7
+layout_picture_caption = 8
     
 def addSlide():
     img_path = 'test.png'
     
     prs = Presentation()
     
-    layout_title = 0
-    layout_title_content = 1
-    layout_section_header = 2
-    layout_two_content = 3
-    layout_comparison = 4
-    layout_title_only = 5
-    layout_blank = 6
-    layout_content_caption = 7
-    layout_picture_caption = 8
-    
     slide_layout = prs.slide_layouts[layout_picture_caption]
-    
-    '''
-    TEST DATA
-    '''
-    x = np.linspace(0, 10)
-    line = plt.plot(x, np.sin(x))
     
     plt.savefig(img_path)
     plt.show()

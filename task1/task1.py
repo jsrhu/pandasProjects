@@ -19,23 +19,11 @@ from pptx.util import Inches
 
 from urlparse import urlparse
 
-# import readWrite
-
 compressed_data = '../data/csv/backtest_alpha_for_ernest.csv.gz'
 
 headers = ['story_sentiment','story_volume','story_traffic','story_shares','article_sentiment','article_traffic','event_impact_score_overall','event_impact_score_entity_1','event_impact_score_entity_2','avg_day_sentiment']
 
-plot_type = 'min_max'
-
-layout_title = 0
-layout_title_content = 1
-layout_section_header = 2
-layout_two_content = 3
-layout_comparison = 4
-layout_title_only = 5
-layout_blank = 6
-layout_content_caption = 7
-layout_picture_caption = 8
+plot_type = 'max_min'
 
 '''
 Reads gzip compressed csv file and converts date string into date-time object
@@ -93,10 +81,16 @@ def addImageSlide(presentation, layout, image_path):
 def savePresentation(presentation, title):
     presentation.save(title+'.pptx')
 
+def myurlparse(x):    
+    try:
+        return urlparse(x).netloc
+    except:
+        return x
+    
 def main():
-    rows=100000
-    #df = readLimitedRows(csv_file=compressed_data,rows=rows)
-    df = readFull(csv_file=compressed_data)
+    rows=1000000
+    df = readLimitedRows(csv_file=compressed_data,rows=rows)
+    #df = readFull(csv_file=compressed_data)
     last_date = df['harvested_at'].max().date()
     df_max = pd.DataFrame()
     df_min = pd.DataFrame()
@@ -108,85 +102,24 @@ def main():
     os.chdir(output)
 
     '''
+    # TICKER COUNT
     ticker_count_1 = df_group['entities_ticker_1'].nunique()
-    ticker_count_1.plot(title='Number of Primary Tickers from Harvested Articles by Day', rot=45, x_compat=True)
+    ticker_count_1.plot(title='Number of Primary Tickers from Harvested Articles by Day', rot=45, figsize=(11,8), x_compat=True)
     plt.tight_layout()
     plt.savefig('unique_ticker1_plot_'+str(rows)+'rows.png')
     plt.clf()
 
     ticker_count_2 = df_group['entities_ticker_2'].nunique()
-    ticker_count_2.plot(title='Number of Secondary Tickers from Harvested Articles by Day', rot=45, x_compat=True)
+    ticker_count_2.plot(title='Number of Secondary Tickers from Harvested Articles by Day', rot=45, figsize=(11,8), x_compat=True)
     plt.tight_layout()
     plt.savefig('unique_ticker2_plot_'+str(rows)+'rows.png')
     plt.clf()
     '''
-
-    df_avg_day = pd.DataFrame(columns=['dofm','total','day_avg'])
-    sr_dofm = pd.Series()
-    list_url = []
-    for date,row in df_group['article_url'].unique().iteritems():
-        for url in row:
-            domain = urlparse(url).netloc
-            list_url.append(domain)
-            
-            if domain in sr_dofm:
-                pass
-            else:
-                sr_dofm[domain] = date
-    sr_url = pd.Series(list_url)
-    sr_value_count = sr_url.value_counts(ascending=True)
     
-    df_avg_day['dofm'] = sr_dofm    
-    df_avg_day['total'] = sr_value_count
-
-    df_avg_day['day_avg'] = df_avg_day['total'].div(df_avg_day['dofm'].rsub(last_date).dt.days+1)
-    df_avg_day = df_avg_day.sort_values(by='day_avg')
-
-    print df_avg_day.head(50)
-    print df_avg_day.tail(50)
-    
-    print df_avg_day['day_avg'].quantile([.1,.5,.99])
-    
-    try:
-        print 'Average daily reference to "www.benzinga.com":',df_avg_day['day_avg']['www.benzinga.com']
-    except:
-        print 'The domain: "www.benzinga.com" could not be found.'
-    try:
-        print 'Average daily reference to "www.bloomberg.com":',df_avg_day['day_avg']['www.bloomberg.com']
-    except:
-        print 'The domain: "www.bloomberg.com" could not be found.'
-    try:
-        print 'Average daily reference to "www.reuters.com":',df_avg_day['day_avg']['www.reuters.com']
-    except:
-        print 'The domain: "www.reuters.com" could not be found.'
-    try:
-        print 'Average daily reference to "finance.yahoo.com":',df_avg_day['day_avg']['finance.yahoo.com']
-    except:
-        print 'The domain: "finance.yahoo.com" could not be found.'
-    try:
-        print 'Average daily reference to "www.wsj.com":',df_avg_day['day_avg']['www.wsj.com']
-    except:
-        print 'The domain: "www.wsj.com" could not be found.'
-
-    bin_range = [x+20 for x in xrange(int(df_avg_day['total'].max())+1)]
-    ax = sr_value_count.plot.hist(logy=False, bins=bin_range)
-    ax.set_ylabel('Number of Domains')
-    ax.set_xlabel('Number of Total References')
-    plt.tight_layout()
-    plt.savefig('domain_total.png')
-    plt.clf()
-    
-    bin_range = [x+20 for x in xrange(int(df_avg_day['day_avg'].max())+1)]
-    ax = df_avg_day['day_avg'].plot.hist(logy=False, bins=bin_range)
-    ax.set_ylabel('Number of Domains')
-    ax.set_xlabel('Number of Average References')
-    plt.tight_layout()
-    plt.savefig('domain_day_avg.png')
-    plt.clf()
-
     '''
-    should look for a better way to do this
-    perhaps new df called df_minmax_$group where $group is one of the numeric columns
+    # MAXMIN PLOTS
+    #should look for a better way to do this
+    #perhaps new df called df_minmax_$group where $group is one of the numeric columns
     for key,group in df_group:
         group_max = group.max(numeric_only=True)
         group_min = group.min(numeric_only=True)
